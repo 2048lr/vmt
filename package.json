@@ -1,0 +1,119 @@
+{
+  "name": "version-management-tool",
+  "version": "1.0.0",
+  "description": "基于 JavaScript 的可视化版本管理工具，提供 GUI 与 CLI 双界面，自动检测并同步 package.json、package-lock.json、README.md 中的版本号",
+  "main": "electron-main.js",
+  "bin": {
+    "vmt": "bin/vmt.js"
+  },
+  "scripts": {
+    "start": "node bin/vmt.js serve",
+    "check": "node bin/vmt.js check",
+    "sync": "node bin/vmt.js sync",
+    "update": "node bin/vmt.js update",
+    "history": "node bin/vmt.js history",
+    "gui": "node bin/vmt.js serve",
+    "electron": "electron .",
+    "dist:win": "electron-builder --win nsis --x64",
+    "dist:linux": "electron-builder --linux AppImage deb rpm --x64",
+    "dist:mac": "electron-builder --mac dmg --x64",
+    "dist:all": "electron-builder --win nsis --linux AppImage deb rpm --x64"
+  },
+  "keywords": [
+    "version",
+    "semver",
+    "package-json",
+    "cli",
+    "gui",
+    "sync",
+    "electron"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "commander": "^11.1.0",
+    "express": "^4.19.2",
+    "semver": "^7.6.2"
+  },
+  "devDependencies": {
+    "electron": "^42.4.1",
+    "electron-builder": "^26.15.3"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "build": {
+    "appId": "com.vmt.version-management-tool",
+    "productName": "VersionManagementTool",
+    "copyright": "Copyright © 2026 VMT",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "bin/**/*",
+      "src/**/*",
+      "gui/**/*",
+      "electron-main.js",
+      "package.json",
+      "README.md",
+      ".versionrc.example.json"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "VersionManagementTool-${version}-setup.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "VMT"
+    },
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "deb",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "rpm",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "category": "Development",
+      "maintainer": "VMT",
+      "artifactName": "VersionManagementTool-${version}-${arch}.${ext}"
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "category": "public.app-category.developer-tools",
+      "artifactName": "VersionManagementTool-${version}.${ext}"
+    }
+  }
+}

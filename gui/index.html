@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>可视化版本管理工具</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app">
+    <!-- 顶部导航 -->
+    <header class="header">
+      <div class="header-left">
+        <div class="logo">
+          <span class="logo-icon">⬢</span>
+          <span class="logo-text">版本管理工具</span>
+          <span class="logo-badge">VMT</span>
+        </div>
+      </div>
+      <div class="header-right">
+        <span id="cwdDisplay" class="cwd-display" title="当前监控目录"></span>
+        <button id="refreshBtn" class="btn btn-ghost" title="刷新">
+          <span class="icon">↻</span> 刷新
+        </button>
+      </div>
+    </header>
+
+    <!-- 状态总览 -->
+    <section class="overview" id="overview">
+      <div class="overview-card" id="statusCard">
+        <div class="overview-icon" id="statusIcon">○</div>
+        <div class="overview-body">
+          <div class="overview-label">一致性状态</div>
+          <div class="overview-value" id="statusValue">检测中...</div>
+        </div>
+      </div>
+      <div class="overview-card">
+        <div class="overview-icon info">v</div>
+        <div class="overview-body">
+          <div class="overview-label">基准版本号</div>
+          <div class="overview-value" id="sourceVersion">-</div>
+        </div>
+      </div>
+      <div class="overview-card">
+        <div class="overview-icon info">f</div>
+        <div class="overview-body">
+          <div class="overview-label">检查文件数</div>
+          <div class="overview-value" id="fileCount">-</div>
+        </div>
+      </div>
+      <div class="overview-card">
+        <div class="overview-icon info">!</div>
+        <div class="overview-body">
+          <div class="overview-label">不一致文件</div>
+          <div class="overview-value" id="mismatchCount">-</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 主体内容 -->
+    <main class="main">
+      <!-- 左侧：文件版本列表 -->
+      <section class="panel">
+        <div class="panel-header">
+          <h2 class="panel-title">文件版本状态</h2>
+          <div class="panel-actions">
+            <button id="syncBtn" class="btn btn-primary" disabled>
+              <span class="icon">⇄</span> 同步版本
+            </button>
+          </div>
+        </div>
+        <div class="panel-body">
+          <div id="fileList" class="file-list">
+            <div class="loading">加载中...</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 右侧：操作面板 -->
+      <aside class="sidebar">
+        <!-- 版本更新 -->
+        <section class="panel panel-compact">
+          <div class="panel-header">
+            <h2 class="panel-title">版本更新</h2>
+          </div>
+          <div class="panel-body">
+            <div class="form-group">
+              <label for="newVersionInput">新版本号</label>
+              <input type="text" id="newVersionInput" placeholder="例如 1.2.0" />
+              <div class="hint">符合语义化规范 MAJOR.MINOR.PATCH</div>
+            </div>
+            <div class="form-group">
+              <label>快捷递增</label>
+              <div class="btn-group">
+                <button class="btn btn-sm btn-ghost" data-inc="patch">+ Patch</button>
+                <button class="btn btn-sm btn-ghost" data-inc="minor">+ Minor</button>
+                <button class="btn btn-sm btn-ghost" data-inc="major">+ Major</button>
+              </div>
+            </div>
+            <button id="updateBtn" class="btn btn-primary btn-block" disabled>
+              <span class="icon">↑</span> 更新并同步
+            </button>
+          </div>
+        </section>
+
+        <!-- 同步选项 -->
+        <section class="panel panel-compact">
+          <div class="panel-header">
+            <h2 class="panel-title">同步选项</h2>
+          </div>
+          <div class="panel-body">
+            <div class="form-group">
+              <label for="syncTargetInput">目标版本（可选）</label>
+              <input type="text" id="syncTargetInput" placeholder="留空则使用基准版本" />
+            </div>
+            <label class="checkbox">
+              <input type="checkbox" id="dryRunCheckbox" checked />
+              <span>仅预览（不实际写入）</span>
+            </label>
+            <button id="previewSyncBtn" class="btn btn-ghost btn-block">
+              <span class="icon">👁</span> 预览同步
+            </button>
+          </div>
+        </section>
+      </aside>
+    </main>
+
+    <!-- 历史记录 -->
+    <section class="panel history-panel">
+      <div class="panel-header">
+        <h2 class="panel-title">变更历史记录</h2>
+        <div class="panel-actions">
+          <button id="refreshHistoryBtn" class="btn btn-ghost btn-sm">刷新</button>
+          <button id="clearHistoryBtn" class="btn btn-danger btn-sm">清空</button>
+        </div>
+      </div>
+      <div class="panel-body">
+        <div id="historyList" class="history-list">
+          <div class="loading">加载中...</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Toast 提示 -->
+    <div id="toast" class="toast"></div>
+
+    <!-- 确认对话框 -->
+    <div id="modal" class="modal hidden">
+      <div class="modal-mask"></div>
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <h3 id="modalTitle">确认操作</h3>
+        </div>
+        <div class="modal-body" id="modalBody"></div>
+        <div class="modal-footer">
+          <button id="modalCancel" class="btn btn-ghost">取消</button>
+          <button id="modalConfirm" class="btn btn-primary">确认</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
