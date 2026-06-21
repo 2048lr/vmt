@@ -14,6 +14,8 @@
   const $ = (id) => document.getElementById(id);
   const dom = {
     cwdDisplay: $('cwdDisplay'),
+    changeDirBtn: $('changeDirBtn'),
+    readmeBtn: $('readmeBtn'),
     refreshBtn: $('refreshBtn'),
     statusCard: $('statusCard'),
     statusIcon: $('statusIcon'),
@@ -33,6 +35,7 @@
     clearHistoryBtn: $('clearHistoryBtn'),
     toast: $('toast'),
     modal: $('modal'),
+    modalDialog: $('modalDialog'),
     modalTitle: $('modalTitle'),
     modalBody: $('modalBody'),
     modalCancel: $('modalCancel'),
@@ -73,8 +76,22 @@
     dom.modalTitle.textContent = title;
     dom.modalBody.innerHTML = body;
     dom.modalConfirm.textContent = confirmText;
+    dom.modalDialog.classList.remove('modal-lg');
+    dom.modalConfirm.style.display = '';
+    dom.modalCancel.textContent = '取消';
     dom.modal.classList.remove('hidden');
     state.pendingAction = onConfirm;
+  }
+
+  // 仅查看用的弹窗（大尺寸，只有关闭按钮）
+  function showViewModal(title, body) {
+    dom.modalTitle.textContent = title;
+    dom.modalBody.innerHTML = body;
+    dom.modalDialog.classList.add('modal-lg');
+    dom.modalConfirm.style.display = 'none';
+    dom.modalCancel.textContent = '关闭';
+    dom.modal.classList.remove('hidden');
+    state.pendingAction = null;
   }
 
   function hideModal() {
@@ -88,6 +105,147 @@
     state.config = data.config;
     dom.cwdDisplay.textContent = '📁 ' + data.cwd;
     dom.cwdDisplay.title = data.cwd;
+  }
+
+  // ===== 切换项目目录 =====
+  async function changeDirectory(newCwd) {
+    const data = await apiCall('/api/cwd', {
+      method: 'POST',
+      body: JSON.stringify({ cwd: newCwd })
+    });
+    showToast(`已切换到目录: ${data.cwd}`, 'success');
+    await loadConfig();
+    await checkVersions();
+    await loadHistory();
+  }
+
+  // ===== 查看 README.md =====
+  async function viewReadme() {
+    dom.readmeBtn.disabled = true;
+    try {
+      const res = await fetch('/api/readme');
+      const data = await res.json();
+      if (!data.success) {
+        // README 不存在：显示友好的错误提示 + 设置路径按钮
+        showViewModal(
+          'README.md 未找到',
+          `<div class="readme-error">
+            <div class="readme-error-icon">⚠</div>
+            <div class="readme-error-title">未找到 README.md 文件</div>
+            <div class="readme-error-desc">
+              ${escapeHtml(data.error || '系统未检测到 README.md 文件。')}
+            </div>
+            <div class="readme-error-path">${escapeHtml(data.cwd || '')}</div>
+            <div style="margin-top:20px;">
+              <button id="setReadmePathBtnErr" class="btn btn-primary">设置 README 路径</button>
+            </div>
+          </div>`
+        );
+        bindSetReadmePathBtn('setReadmePathBtnErr');
+        return;
+      }
+      // README 存在：展示内容 + 路径信息 + 设置按钮
+      const sourceLabel = data.source === 'custom' ? '自定义路径' : '自动检测';
+      showViewModal(
+        `README.md`,
+        `<div class="readme-meta">
+          <div>来源: ${sourceLabel} · 文件: ${escapeHtml(data.path)}</div>
+          <div style="margin-top:6px;display:flex;gap:8px;flex-wrap:wrap;">
+            <button id="setReadmePathBtn" class="btn btn-ghost btn-sm">设置路径</button>
+            ${data.source === 'custom' ? '<button id="clearReadmePathBtn" class="btn btn-ghost btn-sm">恢复自动检测</button>' : ''}
+          </div>
+        </div>
+        <div class="readme-content">${escapeHtml(data.content)}</div>`
+      );
+      bindSetReadmePathBtn('setReadmePathBtn');
+      const clearBtn = document.getElementById('clearReadmePathBtn');
+      if (clearBtn) clearBtn.addEventListener('click', clearReadmePath);
+    } catch (err) {
+      showToast('加载 README 失败: ' + err.message, 'error');
+    } finally {
+      dom.readmeBtn.disabled = false;
+    }
+  }
+
+  // 绑定"设置 README 路径"按钮
+  function bindSetReadmePathBtn(btnId) {
+    const btn = document.getElementById(btnId);
+    if (!btn) return;
+    btn.addEventListener('click', setReadmePath);
+  }
+
+  // ===== 设置 README 路径 =====
+  async function setReadmePath() {
+    // Electron 环境：弹出原生文件选择器
+    if (window.electronAPI && window.electronAPI.selectFile) {
+      try {
+        const selected = await window.electronAPI.selectFile([
+          { name: 'Markdown', extensions: ['md', 'markdown'] },
+          { name: '所有文件', extensions: ['*'] }
+        ]);
+        if (!selected) return; // 用户取消
+        await saveReadmePath(selected);
+      } catch (e) {
+        showToast('打开文件选择器失败: ' + e.message, 'error');
+      }
+      return;
+    }
+
+    // 浏览器环境：手动输入路径
+    hideModal();
+    setTimeout(() => {
+      showModal(
+        '设置 README 路径',
+        `<div class="form-group" style="margin:0;">
+          <label for="readmePathInput">README 文件绝对路径</label>
+          <input type="text" id="readmePathInput" placeholder="例如 C:\\projects\\my-app\\README.md" />
+          <div class="hint">输入 README 文件的绝对路径。留空提交可恢复自动检测。浏览器环境无法弹出文件选择器，请手动输入路径；使用 Electron 桌面版可支持原生选择器。</div>
+        </div>`,
+        async () => {
+          const val = document.getElementById('readmePathInput').value.trim();
+          hideModal();
+          await saveReadmePath(val || null);
+          setTimeout(viewReadme, 100);
+        },
+        '保存'
+      );
+    }, 50);
+  }
+
+  // 保存 README 路径到后端
+  async function saveReadmePath(newPath) {
+    try {
+      await apiCall('/api/readme/path', {
+        method: 'POST',
+        body: JSON.stringify({ path: newPath })
+      });
+      showToast(newPath ? 'README 路径已更新' : '已恢复自动检测', 'success');
+      // 重新加载 README 视图
+      setTimeout(viewReadme, 100);
+    } catch (e) {
+      // 错误已由 apiCall 处理
+    }
+  }
+
+  // ===== 清除自定义 README 路径 =====
+  async function clearReadmePath() {
+    hideModal();
+    await saveReadmePath(null);
+  }
+
+  // ===== 启动时检查 README 是否存在 =====
+  async function checkReadmeExists() {
+    try {
+      const res = await fetch('/api/readme');
+      if (res.status === 404) {
+        const data = await res.json();
+        if (data.cwd) {
+          showToast('未在项目根目录找到 README.md，请确认文件是否存在', 'warning', 5000);
+        }
+      }
+    } catch (e) {
+      // 静默失败，不影响主流程
+    }
   }
 
   // ===== 检查版本 =====
@@ -337,19 +495,60 @@
       showToast('已刷新', 'info', 1500);
     });
 
-    // 同步版本
-    dom.syncBtn.addEventListener('click', async () => {
-      if (!state.checkResult) return;
-      const target = dom.syncTargetInput.value.trim() || null;
-      const dryRun = dom.dryRunCheckbox.checked;
+    // 查看 README.md
+    dom.readmeBtn.addEventListener('click', viewReadme);
 
-      if (target && !isValidSemver(target)) {
-        showToast('目标版本号格式不正确', 'error');
+    // 切换项目目录
+    dom.changeDirBtn.addEventListener('click', async () => {
+      // Electron 环境：调用原生文件资源管理器
+      if (window.electronAPI && window.electronAPI.selectDirectory) {
+        try {
+          const selected = await window.electronAPI.selectDirectory();
+          if (!selected) return; // 用户取消
+          try {
+            await changeDirectory(selected);
+          } catch (e) {
+            // 错误已由 apiCall 处理
+          }
+        } catch (e) {
+          showToast('打开文件选择器失败: ' + e.message, 'error');
+        }
         return;
       }
 
-      if (dryRun) {
-        await syncVersions(target, true);
+      // 浏览器环境：手动输入路径（浏览器沙箱限制无法弹出系统对话框）
+      const current = state.config ? dom.cwdDisplay.title : '';
+      showModal(
+        '切换项目目录',
+        `<div class="form-group" style="margin:0;">
+          <label for="dirInput">项目目录路径（绝对路径）</label>
+          <input type="text" id="dirInput" placeholder="例如 C:\\projects\\my-app" value="${escapeHtml(current)}" />
+          <div class="hint">浏览器环境无法弹出系统文件选择器，请手动输入项目根目录的绝对路径。使用 Electron 桌面版可支持原生选择器。</div>
+        </div>`,
+        async () => {
+          const val = document.getElementById('dirInput').value.trim();
+          if (!val) {
+            showToast('请输入目录路径', 'error');
+            return;
+          }
+          hideModal();
+          try {
+            await changeDirectory(val);
+          } catch (e) {
+            // 错误已由 apiCall 处理
+          }
+        },
+        '切换'
+      );
+    });
+
+    // 同步版本（实际写入，需确认）
+    dom.syncBtn.addEventListener('click', async () => {
+      if (!state.checkResult) return;
+      const target = dom.syncTargetInput.value.trim() || null;
+
+      if (target && !isValidSemver(target)) {
+        showToast('目标版本号格式不正确', 'error');
         return;
       }
 
@@ -358,6 +557,12 @@
       const mismatched = state.checkResult.files.filter(
         (f) => f.exists && f.version && !f.matched
       );
+
+      if (mismatched.length === 0) {
+        showToast('所有文件版本已一致，无需同步', 'info');
+        return;
+      }
+
       const fileList = mismatched.map((f) => `<div>• ${escapeHtml(f.path)}: <code>${escapeHtml(f.version)}</code> → <code>${escapeHtml(targetLabel)}</code></div>`).join('');
 
       showModal(
@@ -480,6 +685,8 @@
       await loadConfig();
       await checkVersions();
       await loadHistory();
+      // 启动时检查 README.md 是否存在（不阻塞主流程）
+      checkReadmeExists();
     } catch (e) {
       dom.fileList.innerHTML = '<div class="empty">初始化失败，请检查服务是否正常运行</div>';
     }

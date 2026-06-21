@@ -5,7 +5,7 @@
  * 启动内置 GUI 服务并在桌面窗口中展示
  */
 
-const { app, BrowserWindow, Menu, shell } = require('electron');
+const { app, BrowserWindow, Menu, shell, ipcMain, dialog } = require('electron');
 const path = require('path');
 const { startServer } = require('./src/server');
 
@@ -42,6 +42,34 @@ function startGuiServer() {
 }
 
 /**
+ * 注册 IPC：弹出原生文件夹选择对话框
+ */
+function registerIpcHandlers() {
+  ipcMain.handle('dialog:selectDirectory', async () => {
+    const result = await dialog.showOpenDialog(mainWindow, {
+      title: '选择项目目录',
+      properties: ['openDirectory']
+    });
+    if (result.canceled || result.filePaths.length === 0) {
+      return null;
+    }
+    return result.filePaths[0];
+  });
+
+  ipcMain.handle('dialog:selectFile', async (event, filters) => {
+    const result = await dialog.showOpenDialog(mainWindow, {
+      title: '选择文件',
+      properties: ['openFile'],
+      filters: filters || [{ name: '所有文件', extensions: ['*'] }]
+    });
+    if (result.canceled || result.filePaths.length === 0) {
+      return null;
+    }
+    return result.filePaths[0];
+  });
+}
+
+/**
  * 创建主窗口
  */
 function createWindow(port) {
@@ -55,7 +83,8 @@ function createWindow(port) {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      sandbox: true
+      sandbox: true,
+      preload: path.join(__dirname, 'electron-preload.js')
     }
   });
 
@@ -89,6 +118,7 @@ if (!gotTheLock) {
 
   app.whenReady().then(async () => {
     try {
+      registerIpcHandlers();
       const port = await startGuiServer();
       createWindow(port);
     } catch (err) {

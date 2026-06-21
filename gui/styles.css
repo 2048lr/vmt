@@ -660,6 +660,18 @@ body {
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
 }
 
+.modal-dialog.modal-lg {
+  max-width: 800px;
+  display: flex;
+  flex-direction: column;
+  max-height: 85vh;
+}
+
+.modal-dialog.modal-lg .modal-body {
+  overflow-y: auto;
+  flex: 1;
+}
+
 .modal-header {
   padding: 16px 20px;
   border-bottom: 1px solid var(--border);
@@ -675,6 +687,66 @@ body {
   font-size: 14px;
   color: var(--text-secondary);
   line-height: 1.8;
+}
+
+/* ===== README 查看 ===== */
+.readme-meta {
+  font-size: 12px;
+  color: var(--text-placeholder);
+  margin-bottom: 12px;
+  font-family: 'Consolas', 'Monaco', monospace;
+}
+
+.readme-content {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 16px;
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--text);
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.readme-error {
+  text-align: center;
+  padding: 32px 16px;
+}
+
+.readme-error-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+  color: var(--warning);
+}
+
+.readme-error-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+
+.readme-error-desc {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.8;
+  margin-bottom: 16px;
+}
+
+.readme-error-path {
+  display: inline-block;
+  padding: 6px 12px;
+  background: var(--bg);
+  border: 1px dashed var(--border);
+  border-radius: 4px;
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 12px;
+  color: var(--text-secondary);
+  word-break: break-all;
 }
 
 .modal-footer {

@@ -1,6 +1,6 @@
 # 可视化版本管理工具 (VMT)
 
-> Version: `1.0.0`
+> Version: `1.0.1`
 
 基于 JavaScript 的可视化版本管理工具，同时提供 **图形用户界面 (GUI)** 与 **命令行界面 (CLI)**，自动检测并同步项目中 `package.json`、`package-lock.json`、`README.md` 等文件中的版本号，确保多处版本信息完全一致。
 
@@ -19,7 +19,7 @@
 
 ```bash
 # 进入项目目录
-cd 版本管理工具（JS）
+cd vmt
 
 # 安装依赖
 npm install
