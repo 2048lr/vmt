@@ -122,7 +122,12 @@ function startServer(options = {}) {
   });
 
   const server = app.listen(port, host, () => {
-    const actualPort = server.address().port;
+    // 绑定失败时 address() 返回 null（错误已由 'error' 事件处理）
+    const addr = server.address();
+    if (!addr) {
+      return;
+    }
+    const actualPort = addr.port;
     const url = `http://${host}:${actualPort}`;
     if (!silent) {
       console.log('');
@@ -141,6 +146,7 @@ function startServer(options = {}) {
     }
   });
 
+  // 错误监听需在 listen 之前注册，避免绑定失败时漏接 error 事件
   server.on('error', (err) => {
     if (err.code === 'EADDRINUSE') {
       console.error(`端口 ${port} 已被占用，请使用 --port 指定其他端口`);
